@@ -5,7 +5,7 @@ import { SearchIcon, CalendarIcon, ClockIcon, UsersIcon, ActivityIcon, PlayIcon,
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { sessionService, Session } from '../../services/sessionService';
+import { sessionApi, SessionDto as Session } from '../../services/sessionApi';
 
 export const SessionList = () => {
   const { user } = useAuth();
@@ -20,28 +20,17 @@ export const SessionList = () => {
 
   // Load sessions from service
   useEffect(() => {
-    const loadSessions = () => {
-      const allSessions = sessionService.getAllSessions();
-      setSessions(allSessions);
-    };
-
-    loadSessions();
-    
-    // Reload sessions periodically to catch status updates
-    const interval = setInterval(loadSessions, 30000); // Every 30 seconds
-    
-    // Listen for storage changes (when sessions are created/updated in other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'learning_platform_sessions') {
-        loadSessions();
+    const load = async () => {
+      try {
+        const data = await sessionApi.list();
+        setSessions(data);
+      } catch (e) {
+        console.error('Failed to load sessions', e);
       }
     };
-    window.addEventListener('storage', handleStorageChange);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorageChange);
-    };
+    load();
+    const interval = setInterval(load, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Filter sessions

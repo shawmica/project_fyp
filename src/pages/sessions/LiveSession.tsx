@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { MessageSquareIcon, UsersIcon, MicIcon, VideoIcon, ShareIcon, MessageCircleIcon, HandIcon, BarChart2Icon, AlertTriangleIcon, ZapIcon, ThumbsUpIcon, SmileIcon, BrainIcon, Settings2Icon, TargetIcon, ChevronRightIcon } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '../../components/ui/Card';
@@ -9,11 +9,15 @@ import { QuestionBank, Question } from '../../components/questions/QuestionBank'
 import { TargetedQuiz } from '../../components/quiz/TargetedQuiz';
 import { QuizPerformance } from '../../components/quiz/QuizPerformance';
 import { quizService, QuizPerformance as QuizPerformanceType } from '../../services/quizService';
+import { sessionApi, SessionDto } from '../../services/sessionApi';
+import { zoomApi } from '../../services/zoomApi';
+import { ZoomEmbed } from '../../components/zoom/ZoomEmbed';
 import { clusteringService, StudentCluster } from '../../services/clusteringService';
 import { toast } from 'sonner';
 
 export const LiveSession = () => {
   const { sessionId } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   
   // Log component mount
@@ -41,9 +45,82 @@ export const LiveSession = () => {
   const [timeTaken, setTimeTaken] = useState(0);
   const [clusters, setClusters] = useState<StudentCluster[]>([]);
   const questionStartTime = React.useRef<number>(0);
+  const [sessionDetails, setSessionDetails] = useState<SessionDto | null>(null);
+  const [embedZoom, setEmbedZoom] = useState(false);
+  const [zoomSignature, setZoomSignature] = useState<string | null>(null);
+  const [zoomSdkKey, setZoomSdkKey] = useState<string | null>(null);
 
   // Determine if user is instructor (must be before useEffect hooks that use it)
   const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
+
+  // Apply tab from query string (?tab=chat|participants|questions)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    if (tabParam && ['chat', 'participants', 'questions'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [location.search]);
+
+  // Load session details (for Zoom join URL, etc.)
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (sessionId) {
+          const s = await sessionApi.get(sessionId);
+          setSessionDetails(s);
+          // Auto-create Zoom meeting for instructors if missing
+          if ((user?.role === 'instructor' || user?.role === 'admin') && (!s.zoomStartUrl || !s.zoomMeetingId)) {
+            try {
+              const updated = await sessionApi.createZoom(sessionId);
+              setSessionDetails(updated);
+              toast.success('Zoom meeting scheduled for this session');
+            } catch (err) {
+              console.error('Auto create zoom failed', err);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load session details', e);
+      }
+    };
+    load();
+  }, [sessionId]);
+
+  // Handle in-browser Zoom join
+  const handleJoinInBrowser = async () => {
+    if (!sessionDetails?.zoomMeetingId) {
+      toast.error('No Zoom meeting available for this session');
+      return;
+    }
+    try {
+      const { signature, sdkKey } = await zoomApi.getSignature(sessionDetails.zoomMeetingId, isInstructor ? 1 : 0);
+      setZoomSignature(signature);
+      setZoomSdkKey(sdkKey);
+      setEmbedZoom(true);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to get Zoom signature');
+    }
+  };
+
+  // Auto-embed Zoom meeting inside the video area when available
+  useEffect(() => {
+    const auto = async () => {
+      if (!sessionDetails?.zoomMeetingId) return;
+      try {
+        const { signature, sdkKey } = await zoomApi.getSignature(sessionDetails.zoomMeetingId, isInstructor ? 1 : 0);
+        setZoomSignature(signature);
+        setZoomSdkKey(sdkKey);
+        setEmbedZoom(true);
+      } catch (e) {
+        // If SDK signature fails (not configured), we silently keep the placeholder and show buttons
+        console.warn('Zoom SDK signature unavailable. Falling back to external join.', e);
+      }
+    };
+    auto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionDetails?.zoomMeetingId, isInstructor]);
 
   // Mock session data
   const session = {
@@ -460,6 +537,51 @@ export const LiveSession = () => {
             )}
           </div>
           <div className="flex items-center gap-2 sm:gap-0 sm:mt-0">
+            {sessionDetails?.zoomJoinUrl && !isInstructor && (
+              <a
+                href={sessionDetails.zoomJoinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-xs sm:text-sm"
+              >
+                <VideoIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Join via Zoom
+              </a>
+            )}
+            {isInstructor && sessionDetails?.zoomStartUrl && (
+              <a
+                href={sessionDetails.zoomStartUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 text-xs sm:text-sm"
+              >
+                <VideoIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Start Zoom
+              </a>
+            )}
+            {sessionDetails?.zoomMeetingId && (
+              <button
+                onClick={handleJoinInBrowser}
+                className="inline-flex items-center px-3 py-2 rounded-md bg-purple-600 text-white hover:bg-purple-700 text-xs sm:text-sm"
+              >
+                <VideoIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Join In-Browser (Beta)
+              </button>
+            )}
+            {isInstructor && !sessionDetails?.zoomStartUrl && sessionId && (
+              <button
+                onClick={async () => {
+                  try {
+                    const updated = await sessionApi.createZoom(sessionId);
+                    setSessionDetails(updated);
+                    toast.success('Zoom meeting created');
+                  } catch (e) {
+                    console.error(e);
+                    toast.error('Failed to create Zoom meeting');
+                  }
+                }}
+                className="inline-flex items-center px-3 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 text-xs sm:text-sm"
+              >
+                <VideoIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" /> Create Zoom
+              </button>
+            )}
             <Badge variant={session.status === 'live' ? 'success' : 'default'} className="text-xs">
               {session.status === 'live' ? 'LIVE' : 'RECORDED'}
             </Badge>
@@ -549,14 +671,28 @@ export const LiveSession = () => {
         {/* Main content area - video */}
         <div className="flex-1 overflow-auto">
           <div className="relative">
-            <div className="bg-gray-800 h-48 sm:h-64 md:h-80 lg:h-96 rounded-lg flex items-center justify-center">
-              <div className="text-white text-center">
-                <p className="text-lg">Video Stream</p>
-                <p className="text-sm text-gray-400">
-                  {session.status === 'live' ? 'Live session in progress' : 'Recorded session playback'}
-                </p>
+            {!embedZoom ? (
+              <div className="bg-gray-800 h-48 sm:h-64 md:h-80 lg:h-96 rounded-lg flex items-center justify-center">
+                <div className="text-white text-center">
+                  <p className="text-lg">Video Stream</p>
+                  <p className="text-sm text-gray-400">
+                    {session.status === 'live' ? 'Live session in progress' : 'Recorded session playback'}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white h-48 sm:h-64 md:h-80 lg:h-96 rounded-lg overflow-hidden">
+                {zoomSignature && zoomSdkKey && sessionDetails?.zoomMeetingId && (
+                  <ZoomEmbed
+                    meetingNumber={sessionDetails.zoomMeetingId}
+                    signature={zoomSignature}
+                    sdkKey={zoomSdkKey}
+                    userName={`${user?.firstName || 'User'} ${user?.lastName || ''}`.trim()}
+                    role={isInstructor ? 1 : 0}
+                  />
+                )}
+              </div>
+            )}
             {/* AI monitoring indicator */}
             <div className="absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center bg-black bg-opacity-50 rounded-full px-2 py-1 sm:px-3 text-xs text-white">
               <BrainIcon className="h-3 w-3 mr-1 text-blue-400" />

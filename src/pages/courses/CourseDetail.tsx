@@ -86,7 +86,11 @@ export const CourseDetail = () => {
               <Button
                 variant="primary"
                 leftIcon={<PlayIcon className="h-4 w-4" />}
-                onClick={() => navigate(`/dashboard/sessions/${course.upcomingSessions[0].id}`)}
+                onClick={() => {
+                  const nextId = course.upcomingSessions[0].id;
+                  const tab = (user?.role === 'instructor' || user?.role === 'admin') ? 'questions' : 'chat';
+                  navigate(`/dashboard/sessions/${nextId}?tab=${tab}`);
+                }}
               >
                 Join Next Session
               </Button>
@@ -282,7 +286,7 @@ export const CourseDetail = () => {
                             </div>
                           </div>
                         </div>
-                        <Link to={`/dashboard/sessions/${session.id}`}>
+                        <Link to={`/dashboard/sessions/${session.id}?tab=${(user?.role === 'instructor' || user?.role === 'admin') ? 'questions' : 'chat'}`}>
                           <Button variant="primary" leftIcon={<PlayIcon className="h-4 w-4" />}>
                             Join
                           </Button>
@@ -324,7 +328,7 @@ export const CourseDetail = () => {
                             )}
                           </div>
                         </div>
-                        <Link to={`/dashboard/sessions/${session.id}`}>
+                        <Link to={`/dashboard/sessions/${session.id}?tab=${(user?.role === 'instructor' || user?.role === 'admin') ? 'questions' : 'chat'}`}>
                           <Button variant="outline">View Recording</Button>
                         </Link>
                       </div>

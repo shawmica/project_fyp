@@ -6,12 +6,13 @@ import { Card } from '../../components/ui/Card';
 import { ArrowLeftIcon } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { toast } from 'sonner';
-import { sessionService } from '../../services/sessionService';
+import { sessionApi } from '../../services/sessionApi';
 
 export const SessionCreate = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [createZoom, setCreateZoom] = useState(true);
 
   // Check if user is instructor or admin
   const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
@@ -35,11 +36,7 @@ export const SessionCreate = () => {
   const handleSubmit = async (data: SessionFormData) => {
     setIsLoading(true);
     try {
-      const instructorName = user?.firstName && user?.lastName 
-        ? `${user.firstName} ${user.lastName}`
-        : user?.email || 'Instructor';
-      
-      const newSession = sessionService.createSession({
+      const created = await sessionApi.create({
         title: data.title,
         course: data.course,
         courseCode: data.courseCode,
@@ -50,10 +47,11 @@ export const SessionCreate = () => {
         description: data.description,
         materials: data.materials || [],
         type: 'scheduled',
-        status: 'upcoming'
-      }, instructorName, user?.id);
+        expectedParticipants: undefined,
+        createZoom,
+      }, { role: (user?.role as any) || 'instructor' });
 
-      console.log('Session created:', newSession);
+      console.log('Session created:', created);
       toast.success('Session created successfully!');
       navigate('/dashboard/sessions');
     } catch (error) {
@@ -86,6 +84,16 @@ export const SessionCreate = () => {
         onCancel={() => navigate('/dashboard/sessions')}
         isLoading={isLoading}
       />
+      <div className="mt-4">
+        <label className="inline-flex items-center space-x-2">
+          <input
+            type="checkbox"
+            checked={createZoom}
+            onChange={(e) => setCreateZoom(e.target.checked)}
+          />
+          <span className="text-sm text-gray-700">Create Zoom meeting for this session</span>
+        </label>
+      </div>
     </div>
   );
 };

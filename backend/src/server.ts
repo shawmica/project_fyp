@@ -1,7 +1,16 @@
 import express, { Request, Response, NextFunction } from 'express';
+// Load .env if dotenv is available
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('dotenv').config();
+} catch (e) {
+  console.warn('[env] dotenv not found; proceeding with process.env');
+}
 import cors from 'cors';
 import quizRoutes from './routes/quiz.routes';
 import clusteringRoutes from './routes/clustering.routes';
+import sessionsRoutes from './routes/sessions.routes';
+import zoomRoutes from './routes/zoom.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -34,7 +43,9 @@ app.get('/', (req: Request, res: Response) => {
     endpoints: {
       health: '/health',
       quiz: '/api/quiz',
-      clustering: '/api/clustering'
+      clustering: '/api/clustering',
+      sessions: '/api/sessions',
+      zoomWebhook: '/api/zoom/webhook'
     }
   });
 });
@@ -42,6 +53,8 @@ app.get('/', (req: Request, res: Response) => {
 // API Routes
 app.use('/api/quiz', quizRoutes);
 app.use('/api/clustering', clusteringRoutes);
+app.use('/api/sessions', sessionsRoutes);
+app.use('/api/zoom', zoomRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
