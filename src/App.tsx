@@ -1,0 +1,78 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { DashboardLayout } from './components/layout/DashboardLayout';
+import { AuthLayout } from './components/layout/AuthLayout';
+import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
+import { ForgotPassword } from './pages/auth/ForgotPassword';
+import { ResetPassword } from './pages/auth/ResetPassword';
+import { AccountActivation } from './pages/auth/AccountActivation';
+import { StudentDashboard } from './pages/dashboard/StudentDashboard';
+import { InstructorDashboard } from './pages/dashboard/InstructorDashboard';
+import { AdminDashboard } from './pages/dashboard/AdminDashboard';
+import { StudentEngagement } from './pages/dashboard/StudentEngagement';
+import { InstructorAnalytics } from './pages/dashboard/InstructorAnalytics';
+import { UserProfile } from './pages/profile/UserProfile';
+import { CourseList } from './pages/courses/CourseList';
+import { CourseDetail } from './pages/courses/CourseDetail';
+import { SessionList } from './pages/sessions/SessionList';
+import { LiveSession } from './pages/sessions/LiveSession';
+
+export function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Redirect root to login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        
+        {/* Auth routes */}
+        <Route path="/auth" element={<AuthLayout />}>
+          <Route path="login" element={<Login />} />
+          <Route path="register" element={<Register />} />
+          <Route path="forgot-password" element={<ForgotPassword />} />
+          <Route path="reset-password/:token" element={<ResetPassword />} />
+          <Route path="activate/:token" element={<AccountActivation />} />
+        </Route>
+        
+        {/* Legacy auth routes for backward compatibility */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/activate/:token" element={<AccountActivation />} />
+        
+        {/* Dashboard routes - Role-based */}
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<Navigate to="/dashboard/student" replace />} />
+          
+          {/* Student Dashboard */}
+          <Route path="student" element={<StudentDashboard />} />
+          <Route path="student/home" element={<Navigate to="/dashboard/student" replace />} />
+          
+          {/* Instructor Dashboard */}
+          <Route path="instructor" element={<InstructorDashboard />} />
+          <Route path="instructor/home" element={<Navigate to="/dashboard/instructor" replace />} />
+          
+          {/* Admin Dashboard */}
+          <Route path="admin" element={<AdminDashboard />} />
+          <Route path="admin/home" element={<Navigate to="/dashboard/admin" replace />} />
+          
+          {/* Common routes available to all roles */}
+          <Route path="courses" element={<CourseList />} />
+          <Route path="courses/:courseId" element={<CourseDetail />} />
+          <Route path="sessions" element={<SessionList />} />
+          <Route path="sessions/:sessionId" element={<LiveSession />} />
+          
+          {/* Student-specific routes */}
+          <Route path="student/engagement" element={<StudentEngagement />} />
+          
+          {/* Instructor-specific routes */}
+          <Route path="instructor/analytics" element={<InstructorAnalytics />} />
+          
+          {/* Common routes */}
+          <Route path="profile" element={<UserProfile />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
