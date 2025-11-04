@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { MessageSquareIcon, UsersIcon, MicIcon, VideoIcon, ShareIcon, MessageCircleIcon, HandIcon, BarChart2Icon, AlertTriangleIcon, ZapIcon, ThumbsUpIcon, SmileIcon, BrainIcon, Settings2Icon, TargetIcon, ChevronRightIcon } from 'lucide-react';
@@ -7,11 +7,23 @@ import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { QuestionBank, Question } from '../../components/questions/QuestionBank';
 import { TargetedQuiz } from '../../components/quiz/TargetedQuiz';
+import { QuizPerformance } from '../../components/quiz/QuizPerformance';
+import { quizService, QuizPerformance as QuizPerformanceType } from '../../services/quizService';
+import { clusteringService, StudentCluster } from '../../services/clusteringService';
 import { toast } from 'sonner';
 
 export const LiveSession = () => {
   const { sessionId } = useParams();
   const { user } = useAuth();
+  
+  // Log component mount
+  useEffect(() => {
+    console.log('=== LiveSession Component Mounted ===');
+    console.log('sessionId from URL:', sessionId);
+    console.log('user:', user);
+    console.log('URL:', window.location.href);
+  }, []);
+  
   const [activeTab, setActiveTab] = useState('chat');
   const [message, setMessage] = useState('');
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -22,6 +34,16 @@ export const LiveSession = () => {
   const [showQuestions, setShowQuestions] = useState(false);
   const [showReactions, setShowReactions] = useState(false);
   const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
+  const [quizPerformance, setQuizPerformance] = useState<QuizPerformanceType | null>(null);
+  const [showPerformance, setShowPerformance] = useState(false);
+  const [answerSubmitted, setAnswerSubmitted] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [timeTaken, setTimeTaken] = useState(0);
+  const [clusters, setClusters] = useState<StudentCluster[]>([]);
+  const questionStartTime = React.useRef<number>(0);
+
+  // Determine if user is instructor (must be before useEffect hooks that use it)
+  const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
 
   // Mock session data
   const session = {
@@ -91,75 +113,83 @@ export const LiveSession = () => {
   // Mock chat messages
   const [chatMessages, setChatMessages] = useState([
     {
-      id: 1,
-      sender: 'Dr. Jane Smith',
-      role: 'instructor',
-      message: "Welcome to today's session on Neural Networks!",
-      time: '14:01'
+    id: 1,
+    sender: 'Dr. Jane Smith',
+    role: 'instructor',
+    message: "Welcome to today's session on Neural Networks!",
+    time: '14:01'
     },
     {
-      id: 2,
-      sender: 'Alice Johnson',
-      role: 'student',
-      message: 'Looking forward to learning about activation functions.',
-      time: '14:02'
+    id: 2,
+    sender: 'Alice Johnson',
+    role: 'student',
+    message: 'Looking forward to learning about activation functions.',
+    time: '14:02'
     },
     {
-      id: 3,
-      sender: 'Bob Williams',
-      role: 'student',
-      message: 'Will we be covering backpropagation today?',
-      time: '14:03'
+    id: 3,
+    sender: 'Bob Williams',
+    role: 'student',
+    message: 'Will we be covering backpropagation today?',
+    time: '14:03'
     }
   ]);
 
-  // Mock engagement clusters
-  const engagementClusters = [
-    {
-      name: 'Highly Engaged',
-      count: 12,
-      percentage: 38,
-      color: 'bg-green-500'
-    },
-    {
-      name: 'Moderately Engaged',
-      count: 14,
-      percentage: 44,
-      color: 'bg-blue-500'
-    },
-    {
-      name: 'Passively Engaged',
-      count: 4,
-      percentage: 12,
-      color: 'bg-yellow-500'
-    },
-    {
-      name: 'At Risk',
-      count: 2,
-      percentage: 6,
-      color: 'bg-red-500'
-    }
-  ];
+  // Use actual clusters from state or fallback to mock
+  const engagementClusters = clusters.length > 0
+    ? clusters.map(cluster => ({
+        name: cluster.name,
+        count: cluster.studentCount,
+        percentage: (cluster.studentCount / clusters.reduce((sum, c) => sum + c.studentCount, 0)) * 100,
+        color: cluster.engagementLevel === 'high' ? 'bg-green-500' :
+               cluster.engagementLevel === 'medium' ? 'bg-blue-500' : 'bg-red-500'
+      }))
+    : [
+        {
+    name: 'Highly Engaged',
+    count: 12,
+    percentage: 38,
+    color: 'bg-green-500'
+        },
+        {
+    name: 'Moderately Engaged',
+    count: 14,
+    percentage: 44,
+    color: 'bg-blue-500'
+        },
+        {
+    name: 'Passively Engaged',
+    count: 4,
+    percentage: 12,
+    color: 'bg-yellow-500'
+        },
+        {
+    name: 'At Risk',
+    count: 2,
+    percentage: 6,
+    color: 'bg-red-500'
+        }
+      ];
 
   // Mock AI suggestions
   const aiSuggestions = [
     {
-      id: 1,
-      type: 'question',
-      content: 'Consider asking about activation functions to engage passive students',
-      priority: 'high'
+    id: 1,
+    type: 'question',
+    content: 'Consider asking about activation functions to engage passive students',
+    priority: 'high'
     },
     {
-      id: 2,
-      type: 'poll',
-      content: 'Poll: Which neural network architecture is best for image recognition?',
-      priority: 'medium'
+    id: 2,
+    type: 'poll',
+    content: 'Poll: Which neural network architecture is best for image recognition?',
+    priority: 'medium'
     },
     {
-      id: 3,
-      type: 'alert',
-      content: '2 students appear disengaged for >5 minutes',
-      priority: 'high'
+    id: 3,
+    type: 'alert',
+    content: '2 students appear disengaged for >5 minutes',
+    priority: 'high'
     }
   ];
 
@@ -185,28 +215,238 @@ export const LiveSession = () => {
     setShowReactions(false);
   };
 
-  const handleTriggerQuestion = (question: Question) => {
+  // Initialize clusters
+  useEffect(() => {
+    console.log('LiveSession mounted, sessionId:', sessionId);
+    if (sessionId) {
+      console.log('Loading clusters for session:', sessionId);
+      clusteringService.getClusters(sessionId)
+        .then(clusterData => {
+          console.log('Clusters loaded:', clusterData);
+          setClusters(clusterData);
+        })
+        .catch(error => {
+          console.error('Error loading clusters:', error);
+          // Set default clusters on error
+          const defaultClusters = clusteringService.getDefaultClusters();
+          console.log('Using default clusters:', defaultClusters);
+          setClusters(defaultClusters);
+        });
+    } else {
+      console.warn('No sessionId found in URL params');
+      // Use default clusters if no sessionId
+      const defaultClusters = clusteringService.getDefaultClusters();
+      setClusters(defaultClusters);
+    }
+  }, [sessionId]);
+
+  // Update engagement clusters when question is triggered
+  useEffect(() => {
+    if (activeQuestion && sessionId) {
+      questionStartTime.current = Date.now();
+      setAnswerSubmitted(false);
+      setShowPerformance(false);
+      setQuizPerformance(null);
+      
+      // Trigger question on backend
+      if (isInstructor) {
+        quizService.triggerQuestion(activeQuestion.id, sessionId);
+      }
+    }
+  }, [activeQuestion, sessionId, isInstructor]);
+
+  // Poll for quiz performance (instructor view)
+  useEffect(() => {
+    if (activeQuestion && isInstructor && !showPerformance && sessionId) {
+      console.log('Starting performance polling for question:', activeQuestion.id, 'session:', sessionId);
+      const interval = setInterval(async () => {
+        try {
+          const performance = await quizService.getQuizPerformance(activeQuestion.id, sessionId);
+          console.log('Performance data received:', performance);
+          setQuizPerformance(performance);
+          
+          // Update clusters based on performance
+          if (performance.answeredStudents > 0) {
+            console.log('Updating clusters based on performance:', performance.correctPercentage);
+            const updatedClusters = await clusteringService.updateClusters({
+              sessionId: sessionId,
+              quizPerformance: {
+                questionId: activeQuestion.id,
+                correctPercentage: performance.correctPercentage,
+              },
+            });
+            console.log('Clusters updated:', updatedClusters);
+            setClusters(updatedClusters);
+          }
+        } catch (error) {
+          console.error('Error in performance polling:', error);
+        }
+      }, 2000); // Poll every 2 seconds
+
+      return () => {
+        console.log('Stopping performance polling');
+        clearInterval(interval);
+      };
+    }
+  }, [activeQuestion, isInstructor, showPerformance, sessionId]);
+
+  const handleTriggerQuestion = async (question: Question) => {
+    console.log('Triggering question:', question.id, 'for session:', sessionId);
+    
+    if (!sessionId) {
+      console.error('No sessionId available');
+      toast.error('Session ID not found. Please refresh the page.');
+      return;
+    }
+
+    if (!question || !question.id) {
+      console.error('Invalid question:', question);
+      toast.error('Invalid question. Please try again.');
+      return;
+    }
+
     setActiveQuestion(question);
     setShowQuestions(false);
-    toast.success(`Question triggered: ${question.question.substring(0, 50)}...`);
-    // In real app, this would emit to Socket.IO to send question to all students
+    setAnswerSubmitted(false);
+    setShowPerformance(false);
+    setQuizPerformance(null);
+    questionStartTime.current = Date.now();
+    
+    if (isInstructor) {
+      try {
+        console.log('Calling quizService.triggerQuestion...');
+        const result = await quizService.triggerQuestion(question.id, sessionId);
+        console.log('Question triggered successfully:', result);
+        toast.success(`Question triggered: ${question.question.substring(0, 50)}...`);
+      } catch (error) {
+        console.error('Error triggering question:', error);
+        toast.error('Failed to trigger question. Please try again.');
+      }
+    } else {
+      console.log('Question triggered by student (local only)');
+      toast.success('Question received!');
+    }
   };
 
-  const handleQuestionAnswer = (answerIndex: number) => {
-    // In real app, this would send the answer to the backend
-    console.log('Answer submitted:', answerIndex);
-    toast.success('Answer submitted successfully!');
+  const handleQuestionAnswer = async (answerIndex: number) => {
+    console.log('Answer submitted:', { answerIndex, activeQuestion, sessionId, user });
+    
+    if (!activeQuestion) {
+      console.error('No active question');
+      toast.error('No question is active.');
+      return;
+    }
+    
+    if (!sessionId) {
+      console.error('No sessionId');
+      toast.error('Session ID not found. Please refresh the page.');
+      return;
+    }
+    
+    if (!user) {
+      console.error('No user');
+      toast.error('User not found. Please log in again.');
+      return;
+    }
+    
+    const timeTakenMs = Date.now() - questionStartTime.current;
+    const timeTakenSeconds = timeTakenMs / 1000;
+    setTimeTaken(timeTakenSeconds);
+    setAnswerSubmitted(true);
+
+    console.log('Submitting answer to backend...', {
+      questionId: activeQuestion.id,
+      answerIndex,
+      timeTaken: timeTakenSeconds,
+      studentId: user.id || 'unknown',
+      sessionId,
+    });
+
+    try {
+      const result = await quizService.submitAnswer({
+        questionId: activeQuestion.id,
+        answerIndex,
+        timeTaken: timeTakenSeconds,
+        studentId: user.id || 'unknown',
+        sessionId,
+      });
+
+      console.log('Answer submission result:', result);
+      setIsCorrect(result.isCorrect);
+      
+      if (result.isCorrect) {
+        toast.success('Correct answer! 🎉');
+      } else {
+        toast.error('Incorrect answer. Keep trying!');
+      }
+
+      // For students, show performance after a delay
+      if (!isInstructor) {
+        console.log('Student answered, will show performance in 2 seconds...');
+        setTimeout(async () => {
+          try {
+            console.log('Fetching performance for student...');
+            const performance = await quizService.getQuizPerformance(activeQuestion.id, sessionId);
+            console.log('Performance data received:', performance);
+            setQuizPerformance(performance);
+            setShowPerformance(true);
+          } catch (error) {
+            console.error('Error fetching performance:', error);
+            toast.error('Could not load performance data.');
+          }
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      toast.error('Failed to submit answer. Please try again.');
+      setAnswerSubmitted(false);
+    }
   };
 
   const handleCloseQuestion = () => {
     setActiveQuestion(null);
+    setShowPerformance(false);
+    setQuizPerformance(null);
+    setAnswerSubmitted(false);
+    setIsCorrect(null);
   };
 
-  const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
+  const handleShowPerformance = () => {
+    setShowPerformance(true);
+  };
+
+  // Debug: Log session info
+  useEffect(() => {
+    console.log('LiveSession Debug Info:', {
+      sessionId,
+      user: user?.firstName,
+      role: user?.role,
+      isInstructor,
+      clustersCount: clusters.length,
+      hasActiveQuestion: !!activeQuestion
+    });
+  }, [sessionId, user, isInstructor, clusters.length, activeQuestion]);
+
+  // Show error if no sessionId
+  if (!sessionId) {
+    return (
+      <div className="py-6">
+        <Card className="p-6">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Session Not Found</h2>
+            <p className="text-gray-600 mb-4">No session ID provided in the URL.</p>
+            <Button variant="primary" onClick={() => window.location.href = '/dashboard/sessions'}>
+              Go to Sessions
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+    <div className="w-full h-full flex flex-col" style={{ minHeight: '600px' }}>
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg flex-shrink-0">
         <div className="px-4 py-4 sm:py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex-1 min-w-0">
             <h1 className="text-base sm:text-lg font-medium text-gray-900 dark:text-gray-100 truncate">
@@ -215,6 +455,9 @@ export const LiveSession = () => {
             <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
               {session.course} • {session.date} • {session.time}
             </p>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="mt-1 text-xs text-gray-400">Session ID: {sessionId}</p>
+            )}
           </div>
           <div className="flex items-center gap-2 sm:gap-0 sm:mt-0">
             <Badge variant={session.status === 'live' ? 'success' : 'default'} className="text-xs">
@@ -230,7 +473,7 @@ export const LiveSession = () => {
       </div>
 
       {/* Active Question Display - Full screen on mobile */}
-      {activeQuestion && (
+      {activeQuestion && !showPerformance && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 md:relative md:inset-auto md:z-auto md:bg-transparent md:p-0 md:mt-4">
           <Card className="w-full max-w-2xl border-2 border-indigo-500 max-h-[90vh] overflow-y-auto">
             <div className="p-4 md:p-6">
@@ -240,26 +483,65 @@ export const LiveSession = () => {
                   <h3 className="text-lg font-semibold text-gray-900">Active Question</h3>
                   <Badge variant="danger">LIVE</Badge>
                 </div>
-                {isInstructor && (
-                  <Button variant="outline" size="sm" onClick={handleCloseQuestion} className="w-full sm:w-auto">
-                    Close Question
-                  </Button>
-                )}
+                <div className="flex gap-2">
+                  {isInstructor && answerSubmitted && (
+                    <Button variant="primary" size="sm" onClick={handleShowPerformance} className="w-full sm:w-auto">
+                      View Performance
+                    </Button>
+                  )}
+                  {isInstructor && (
+                    <Button variant="outline" size="sm" onClick={handleCloseQuestion} className="w-full sm:w-auto">
+                      Close Question
+                    </Button>
+                  )}
+                </div>
               </div>
-            <TargetedQuiz
-              question={{
-                id: activeQuestion.id,
-                question: activeQuestion.question,
-                options: activeQuestion.options,
-                correctAnswer: activeQuestion.correctAnswer,
-                difficulty: activeQuestion.difficulty
-              }}
-              onAnswer={handleQuestionAnswer}
-              timeLimit={activeQuestion.timeLimit}
-              isPersonalized={false}
-            />
+              <TargetedQuiz
+                question={{
+                  id: activeQuestion.id,
+                  question: activeQuestion.question,
+                  options: activeQuestion.options,
+                  correctAnswer: activeQuestion.correctAnswer,
+                  difficulty: activeQuestion.difficulty
+                }}
+                onAnswer={handleQuestionAnswer}
+                timeLimit={activeQuestion.timeLimit}
+                isPersonalized={false}
+              />
+              {answerSubmitted && !isInstructor && (
+                <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    {isCorrect 
+                      ? '✅ Great job! Your answer has been recorded.' 
+                      : '📝 Your answer has been recorded. Keep learning!'}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    Performance statistics will be shown shortly...
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Quiz Performance Display */}
+      {activeQuestion && showPerformance && quizPerformance && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center p-4 md:relative md:inset-auto md:z-auto md:bg-transparent md:p-0 md:mt-4">
+          <QuizPerformance
+            performance={quizPerformance}
+            question={{
+              id: activeQuestion.id,
+              question: activeQuestion.question,
+              difficulty: activeQuestion.difficulty
+            }}
+            onClose={() => {
+              setShowPerformance(false);
+              if (!isInstructor) {
+                handleCloseQuestion();
+              }
+            }}
+          />
         </div>
       )}
 
@@ -420,7 +702,7 @@ export const LiveSession = () => {
                 size="sm"
                 leftIcon={<BarChart2Icon className="h-4 w-4" />}
                 onClick={() => {
-                  setShowAnalytics(!showAnalytics);
+            setShowAnalytics(!showAnalytics);
                   if (showAnalytics) {
                     setShowAIPanel(false);
                     setShowQuestions(false);
@@ -436,7 +718,7 @@ export const LiveSession = () => {
                 size="sm"
                 leftIcon={<BrainIcon className="h-4 w-4" />}
                 onClick={() => {
-                  setShowAIPanel(!showAIPanel);
+            setShowAIPanel(!showAIPanel);
                   if (showAIPanel) {
                     setShowAnalytics(false);
                     setShowQuestions(false);
@@ -478,85 +760,85 @@ export const LiveSession = () => {
           {/* Analytics panel (instructor only) */}
           {showAnalytics && isInstructor && (
             <Card className="mt-4 border-2 border-indigo-100 dark:border-indigo-900">
-              <CardHeader className="bg-indigo-50 dark:bg-indigo-900">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-md font-medium text-indigo-900 dark:text-indigo-100">
-                    Real-time Engagement Analytics
-                  </h3>
-                  <Badge variant="info">Live</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Engagement Clusters
-                  </h4>
-                  <div className="space-y-3">
+                <CardHeader className="bg-indigo-50 dark:bg-indigo-900">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-md font-medium text-indigo-900 dark:text-indigo-100">
+                      Real-time Engagement Analytics
+                    </h3>
+                    <Badge variant="info">Live</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Engagement Clusters
+                    </h4>
+                    <div className="space-y-3">
                     {engagementClusters.map(cluster => (
                       <div key={cluster.name} className="flex items-center">
-                        <span className={`h-3 w-3 rounded-full ${cluster.color} mr-2`}></span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400 w-32">
-                          {cluster.name}
-                        </span>
-                        <div className="flex-1 mx-2">
-                          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                          <span className={`h-3 w-3 rounded-full ${cluster.color} mr-2`}></span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400 w-32">
+                            {cluster.name}
+                          </span>
+                          <div className="flex-1 mx-2">
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                             <div
                               className={`${cluster.color} h-2 rounded-full`}
                               style={{ width: `${cluster.percentage}%` }}
                             ></div>
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {cluster.count} ({cluster.percentage}%)
-                        </span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {cluster.count} ({cluster.percentage}%)
+                          </span>
                       </div>
                     ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mt-4">
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Average Attention Score
-                    </div>
-                    <div className="mt-1 text-xl font-semibold text-indigo-600 dark:text-indigo-400">
-                      78%
                     </div>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Questions Asked
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Average Attention Score
+                      </div>
+                      <div className="mt-1 text-xl font-semibold text-indigo-600 dark:text-indigo-400">
+                        78%
+                      </div>
                     </div>
-                    <div className="mt-1 text-xl font-semibold text-indigo-600 dark:text-indigo-400">
-                      8
+                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Questions Asked
+                      </div>
+                      <div className="mt-1 text-xl font-semibold text-indigo-600 dark:text-indigo-400">
+                        8
+                      </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
+                </CardContent>
             </Card>
           )}
 
           {/* AI Panel (instructor only) */}
           {showAIPanel && isInstructor && (
             <Card className="mt-4 border-2 border-blue-100 dark:border-blue-900">
-              <CardHeader className="bg-blue-50 dark:bg-blue-900">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-md font-medium text-blue-900 dark:text-blue-100 flex items-center">
-                    <BrainIcon className="h-4 w-4 mr-2" />
-                    AI Teaching Assistant
-                  </h3>
-                  <button className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-800">
-                    <Settings2Icon className="h-4 w-4 text-blue-600 dark:text-blue-300" />
-                  </button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+                <CardHeader className="bg-blue-50 dark:bg-blue-900">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-md font-medium text-blue-900 dark:text-blue-100 flex items-center">
+                      <BrainIcon className="h-4 w-4 mr-2" />
+                      AI Teaching Assistant
+                    </h3>
+                    <button className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-800">
+                      <Settings2Icon className="h-4 w-4 text-blue-600 dark:text-blue-300" />
+                    </button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
                   {aiSuggestions.map(suggestion => (
                     <div
                       key={suggestion.id}
                       className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3"
                     >
-                      <div className="flex items-center mb-2">
+                        <div className="flex items-center mb-2">
                         <Badge
                           variant={suggestion.priority === 'high' ? 'danger' : 'warning'}
                           size="sm"
@@ -564,26 +846,26 @@ export const LiveSession = () => {
                           {suggestion.priority}
                         </Badge>
                         <span className="ml-2 text-xs text-gray-500 dark:text-gray-400 capitalize">
-                          {suggestion.type}
-                        </span>
-                      </div>
+                            {suggestion.type}
+                          </span>
+                        </div>
                       <p className="text-sm text-gray-700 dark:text-gray-300">
-                        {suggestion.content}
-                      </p>
-                    </div>
+                          {suggestion.content}
+                        </p>
+                        </div>
                   ))}
-                </div>
-                <div className="mt-4 flex">
+                  </div>
+                  <div className="mt-4 flex">
                   <input
                     type="text"
                     placeholder="Ask AI for teaching suggestions..."
                     className="flex-1 rounded-l-md border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <button className="inline-flex items-center px-3 py-2 border border-transparent rounded-r-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
-                    <ZapIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              </CardContent>
+                    <button className="inline-flex items-center px-3 py-2 border border-transparent rounded-r-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700">
+                      <ZapIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </CardContent>
             </Card>
           )}
         </div>
@@ -645,7 +927,7 @@ export const LiveSession = () => {
                             : 'bg-gray-600'
                         }`}
                       >
-                        {msg.sender.charAt(0)}
+                          {msg.sender.charAt(0)}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center space-x-2">
@@ -665,7 +947,7 @@ export const LiveSession = () => {
                       </div>
                     </div>
                   ))}
-                </div>
+              </div>
                 <div className="p-4 border-t border-gray-200 dark:border-gray-700">
                   <form onSubmit={handleSendMessage} className="flex space-x-2">
                     <input
@@ -681,7 +963,7 @@ export const LiveSession = () => {
                     >
                       Send
                     </button>
-                  </form>
+                </form>
                 </div>
               </div>
             )}
@@ -694,11 +976,11 @@ export const LiveSession = () => {
                       <div className="flex items-center space-x-3">
                         <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white text-sm font-semibold">
                           U{i}
-                        </div>
+                    </div>
                         <div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             Student {i}
-                          </p>
+                      </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">Active</p>
                         </div>
                       </div>
@@ -710,7 +992,7 @@ export const LiveSession = () => {
 
             {activeTab === 'questions' && isInstructor && (
               <div className="p-4">
-                <div className="mb-4">
+              <div className="mb-4">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
                     Quick Access Questions
                   </h3>
@@ -735,12 +1017,12 @@ export const LiveSession = () => {
                       </div>
                       <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
                         {question.question}
-                      </p>
+                        </p>
                       <div className="flex items-center mt-2 text-xs text-indigo-600 dark:text-indigo-400">
                         <TargetIcon className="h-3 w-3 mr-1" />
                         Click to trigger
                       </div>
-                    </button>
+                  </button>
                   ))}
                 </div>
               </div>

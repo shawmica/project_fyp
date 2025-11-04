@@ -9,12 +9,12 @@ import { EngagementIndicator } from '../../components/engagement/EngagementIndic
 // Mock course data with engagement metrics
 const courses = [
   {
-    id: '1',
-    title: 'Machine Learning Fundamentals',
-    code: 'CS301',
-    instructor: 'Dr. Jane Smith',
-    students: 45,
-    sessions: 12,
+  id: '1',
+  title: 'Machine Learning Fundamentals',
+  code: 'CS301',
+  instructor: 'Dr. Jane Smith',
+  students: 45,
+  sessions: 12,
     completedSessions: 8,
     lastActive: '2023-10-10',
     engagement: 85,
@@ -24,12 +24,12 @@ const courses = [
     color: 'bg-gradient-to-br from-indigo-500 to-purple-600'
   },
   {
-    id: '2',
-    title: 'Database Systems',
-    code: 'CS202',
-    instructor: 'Prof. John Doe',
-    students: 38,
-    sessions: 10,
+  id: '2',
+  title: 'Database Systems',
+  code: 'CS202',
+  instructor: 'Prof. John Doe',
+  students: 38,
+  sessions: 10,
     completedSessions: 6,
     lastActive: '2023-10-09',
     engagement: 72,
@@ -39,12 +39,12 @@ const courses = [
     color: 'bg-gradient-to-br from-blue-500 to-cyan-600'
   },
   {
-    id: '3',
-    title: 'Advanced Programming Techniques',
-    code: 'CS304',
-    instructor: 'Dr. Maria Rodriguez',
-    students: 30,
-    sessions: 8,
+  id: '3',
+  title: 'Advanced Programming Techniques',
+  code: 'CS304',
+  instructor: 'Dr. Maria Rodriguez',
+  students: 30,
+  sessions: 8,
     completedSessions: 5,
     lastActive: '2023-10-11',
     engagement: 78,
@@ -54,12 +54,12 @@ const courses = [
     color: 'bg-gradient-to-br from-green-500 to-emerald-600'
   },
   {
-    id: '4',
-    title: 'Data Structures and Algorithms',
-    code: 'CS201',
-    instructor: 'Prof. David Chen',
-    students: 42,
-    sessions: 14,
+  id: '4',
+  title: 'Data Structures and Algorithms',
+  code: 'CS201',
+  instructor: 'Prof. David Chen',
+  students: 42,
+  sessions: 14,
     completedSessions: 10,
     lastActive: '2023-10-08',
     engagement: 65,
@@ -69,12 +69,12 @@ const courses = [
     color: 'bg-gradient-to-br from-orange-500 to-red-600'
   },
   {
-    id: '5',
-    title: 'Web Development',
-    code: 'CS305',
-    instructor: 'Dr. Alex Johnson',
-    students: 35,
-    sessions: 10,
+  id: '5',
+  title: 'Web Development',
+  code: 'CS305',
+  instructor: 'Dr. Alex Johnson',
+  students: 35,
+  sessions: 10,
     completedSessions: 7,
     lastActive: '2023-10-07',
     engagement: 80,
@@ -173,7 +173,7 @@ export const CourseList = () => {
             >
               <FilterIcon className="-ml-1 mr-2 h-5 w-5" />
               Filters
-            </button>
+              </button>
           </div>
 
           {/* Filter Options */}
@@ -298,12 +298,12 @@ export const CourseList = () => {
                     <div className="flex items-center text-sm text-gray-600 mb-1">
                       <ClockIcon className="h-4 w-4 mr-1" />
                       <span>Sessions</span>
-                    </div>
+                      </div>
                     <p className="text-lg font-semibold text-gray-900">
                       {course.completedSessions}/{course.sessions}
                     </p>
-                  </div>
-                </div>
+                      </div>
+                      </div>
 
                 {/* Upcoming Session */}
                 {course.upcomingSession && (
@@ -311,9 +311,9 @@ export const CourseList = () => {
                     <div className="flex items-center text-sm text-indigo-900 mb-1">
                       <CalendarIcon className="h-4 w-4 mr-1" />
                       <span className="font-medium">Next Session</span>
-                    </div>
+                      </div>
                     <p className="text-sm text-indigo-700">{course.upcomingSession}</p>
-                  </div>
+                      </div>
                 )}
 
                 {/* Actions */}
@@ -330,14 +330,14 @@ export const CourseList = () => {
                       className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50 transition-colors"
                     >
                       Join
-                    </Link>
+                      </Link>
                   )}
                 </div>
-              </div>
+          </div>
             </Card>
           ))}
         </div>
       )}
-    </div>
+      </div>
   );
 };

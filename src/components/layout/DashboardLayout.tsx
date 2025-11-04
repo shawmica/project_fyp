@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { BookOpenIcon, CalendarIcon, MenuIcon, XIcon, HomeIcon, GraduationCapIcon, BellIcon, LogOutIcon, BarChart3Icon, ActivityIcon, TargetIcon } from 'lucide-react';
+import { BookOpenIcon, CalendarIcon, MenuIcon, XIcon, HomeIcon, GraduationCapIcon, BellIcon, LogOutIcon, BarChart3Icon, ActivityIcon, ChevronLeftIcon, ChevronRightIcon, TargetIcon } from 'lucide-react';
 
 export const DashboardLayout = () => {
   const location = useLocation();
@@ -9,32 +9,16 @@ export const DashboardLayout = () => {
   const { user, logout, isAuthenticated, isLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Get saved state from localStorage or default to false
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved ? JSON.parse(saved) : false;
+  });
 
-  // Redirect to login if not authenticated
-  if (!isLoading && !isAuthenticated) {
-    navigate('/login');
-    return null;
-  }
-
-  // Show loading state while checking authentication
-  if (isLoading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Get user initials for avatar
-  const userInitials = useMemo(() => {
-    if (user?.firstName && user?.lastName) {
-      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
-    }
-    return 'U';
-  }, [user]);
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   // Get dashboard route based on user role
   const getDashboardRoute = () => {
@@ -43,6 +27,14 @@ export const DashboardLayout = () => {
     }
     return '/dashboard/student';
   };
+
+  // Get user initials for avatar
+  const userInitials = useMemo(() => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    return 'U';
+  }, [user]);
 
   // Navigation items based on user role
   const navigationItems = useMemo(() => {
@@ -94,6 +86,10 @@ export const DashboardLayout = () => {
     navigate('/login');
   };
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   // Check if current path matches the item (including role-based dashboard)
   const isActive = (href: string) => {
     if (href === getDashboardRoute()) {
@@ -104,6 +100,24 @@ export const DashboardLayout = () => {
 
   // Check if profile is active
   const isProfileActive = location.pathname === '/dashboard/profile';
+
+  // Redirect to login if not authenticated (AFTER all hooks)
+  if (!isLoading && !isAuthenticated) {
+    navigate('/login');
+    return null;
+  }
+
+  // Show loading state while checking authentication (AFTER all hooks)
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
   return <div className="h-screen flex overflow-hidden bg-gray-50">
       {/* Mobile sidebar */}
       <div className={`md:hidden ${sidebarOpen ? 'fixed inset-0 flex z-40' : 'hidden'}`}>
@@ -182,77 +196,101 @@ export const DashboardLayout = () => {
         </div>
       </div>
       {/* Static sidebar for desktop */}
-      <div className="hidden md:flex md:flex-shrink-0">
-        <div className="flex flex-col w-72">
+      <div className={`hidden md:flex md:flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'w-20' : 'w-72'}`}>
+        <div className="flex flex-col w-full relative">
           <div className="flex flex-col h-0 flex-1 bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 shadow-2xl">
             <div className="flex-1 flex flex-col pt-6 pb-4 overflow-y-auto">
               {/* Logo/Brand Section */}
-              <div className="flex-shrink-0 flex items-center px-6 mb-8">
+              <div className={`flex-shrink-0 flex items-center mb-8 transition-all duration-300 ${sidebarCollapsed ? 'px-3 justify-center' : 'px-6'}`}>
                 <div className="flex items-center space-x-3">
                   <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-lg">
                     <GraduationCapIcon className="h-7 w-7 text-white" />
                   </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Learning Platform</h2>
-                    <p className="text-xs text-indigo-200 font-medium">Smart Education</p>
-                  </div>
+                  {!sidebarCollapsed && (
+                    <div className="transition-opacity duration-300">
+                      <h2 className="text-xl font-bold text-white">Learning Platform</h2>
+                      <p className="text-xs text-indigo-200 font-medium">Smart Education</p>
+                    </div>
+                  )}
                 </div>
               </div>
-              
+
               {/* Navigation */}
-              <nav className="flex-1 px-3 space-y-1.5">
+              <nav className={`flex-1 space-y-1.5 transition-all duration-300 ${sidebarCollapsed ? 'px-2' : 'px-3'}`}>
                 {navigationItems.map(item => (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={`
-                      group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200
+                      group flex items-center rounded-xl transition-all duration-200
                       ${
                         isActive(item.href)
                           ? 'bg-white/20 text-white shadow-lg backdrop-blur-sm border border-white/30'
                           : 'text-indigo-100 hover:bg-white/10 hover:text-white hover:shadow-md'
                       }
+                      ${sidebarCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'}
                     `}
+                    title={sidebarCollapsed ? item.name : undefined}
                   >
-                    <item.icon 
-                      className={`mr-3 h-5 w-5 flex-shrink-0 transition-colors ${
+                    <item.icon
+                      className={`flex-shrink-0 transition-colors ${
                         isActive(item.href) ? 'text-white' : 'text-indigo-200 group-hover:text-white'
-                      }`} 
-                      aria-hidden="true" 
+                      } ${sidebarCollapsed ? 'h-6 w-6' : 'mr-3 h-5 w-5'}`}
+                      aria-hidden="true"
                     />
-                    <span className="font-semibold">{item.name}</span>
-                    {isActive(item.href) && (
-                      <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                    {!sidebarCollapsed && (
+                      <>
+                        <span className="font-semibold text-sm">{item.name}</span>
+                        {isActive(item.href) && (
+                          <div className="ml-auto w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        )}
+                      </>
                     )}
                   </Link>
                 ))}
               </nav>
             </div>
-            
+
             {/* User Profile Section */}
             <Link
               to="/dashboard/profile"
-              className={`flex-shrink-0 border-t border-white/20 p-4 backdrop-blur-sm transition-colors cursor-pointer ${
+              className={`flex-shrink-0 border-t border-white/20 backdrop-blur-sm transition-colors cursor-pointer ${
                 isProfileActive ? 'bg-white/15' : 'bg-white/5 hover:bg-white/10'
-              }`}
+              } ${sidebarCollapsed ? 'p-3' : 'p-4'}`}
+              title={sidebarCollapsed ? 'Profile' : undefined}
             >
-              <div className="flex items-center w-full">
-                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/20">
+              <div className={`flex items-center transition-all duration-300 ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/20 flex-shrink-0">
                   {userInitials}
                 </div>
-                <div className="ml-3 flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {user?.firstName} {user?.lastName}
-                  </p>
-                  <div className="flex items-center space-x-1 mt-0.5">
-                    <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                    <p className="text-xs font-medium text-indigo-200 capitalize truncate">
-                      {user?.role || 'User'}
+                {!sidebarCollapsed && (
+                  <div className="ml-3 flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-white truncate">
+                      {user?.firstName} {user?.lastName}
                     </p>
+                    <div className="flex items-center space-x-1 mt-0.5">
+                      <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                      <p className="text-xs font-medium text-indigo-200 capitalize truncate">
+                        {user?.role || 'User'}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </Link>
+
+            {/* Toggle Button */}
+            <button
+              onClick={toggleSidebar}
+              className="absolute -right-3 top-1/2 transform -translate-y-1/2 z-10 p-1.5 bg-white rounded-full shadow-lg border-2 border-indigo-600 hover:bg-indigo-50 transition-colors"
+              title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? (
+                <ChevronRightIcon className="h-4 w-4 text-indigo-600" />
+              ) : (
+                <ChevronLeftIcon className="h-4 w-4 text-indigo-600" />
+              )}
+            </button>
           </div>
         </div>
       </div>
@@ -340,8 +378,8 @@ export const DashboardLayout = () => {
           </div>
         </div>
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
+          <div className="py-6 h-full">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 h-full">
               <Outlet />
             </div>
           </div>

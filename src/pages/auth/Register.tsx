@@ -118,8 +118,8 @@ export const Register = () => {
             <GraduationCap className="h-12 w-12 text-indigo-600 dark:text-indigo-400" />
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900 dark:text-white">
-            Create a new account
-          </h2>
+          Create a new account
+        </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
             Already have an account?{' '}
             <Link

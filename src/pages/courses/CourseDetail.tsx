@@ -100,7 +100,7 @@ export const CourseDetail = () => {
                 View Analytics
               </Button>
             )}
-          </div>
+        </div>
         </div>
 
         {/* Progress and Engagement */}
@@ -110,10 +110,10 @@ export const CourseDetail = () => {
               <div>
                 <p className="text-sm text-gray-600">Course Progress</p>
                 <p className="text-2xl font-bold text-gray-900">{course.progress}%</p>
-              </div>
+      </div>
               <div className="p-3 bg-indigo-100 rounded-lg">
                 <TrendingUpIcon className="h-6 w-6 text-indigo-600" />
-              </div>
+        </div>
             </div>
             <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
               <div
@@ -144,7 +144,7 @@ export const CourseDetail = () => {
               </div>
               <div className="p-3 bg-green-100 rounded-lg">
                 <CheckCircleIcon className="h-6 w-6 text-green-600" />
-              </div>
+            </div>
             </div>
           </Card>
         </div>
@@ -238,8 +238,8 @@ export const CourseDetail = () => {
                   <div>
                     <p className="text-xs text-gray-600">Response Time</p>
                     <p className="text-lg font-bold text-gray-900">{course.analytics.averageResponseTime}s</p>
-                  </div>
-                </div>
+          </div>
+                    </div>
               </Card>
               <Card className="p-4">
                 <div className="flex items-center">
@@ -330,8 +330,8 @@ export const CourseDetail = () => {
                       </div>
                     </Card>
                   ))}
-                </div>
-              </div>
+          </div>
+        </div>
             )}
           </div>
         )}

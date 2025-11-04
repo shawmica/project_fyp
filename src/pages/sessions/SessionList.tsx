@@ -1,93 +1,48 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { SearchIcon, CalendarIcon, ClockIcon, UsersIcon, ActivityIcon, PlayIcon, VideoIcon, TrendingUpIcon, BookOpenIcon } from 'lucide-react';
+import { SearchIcon, CalendarIcon, ClockIcon, UsersIcon, ActivityIcon, PlayIcon, VideoIcon, TrendingUpIcon, BookOpenIcon, PlusIcon, EditIcon } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-
-// Mock session data with engagement metrics
-const sessions = [
-  {
-    id: '1',
-    title: 'Machine Learning: Neural Networks',
-    course: 'Machine Learning Fundamentals',
-    courseCode: 'CS301',
-    instructor: 'Dr. Jane Smith',
-    date: '2023-10-15',
-    time: '14:00-15:30',
-    status: 'live',
-    participants: 32,
-    engagement: 88,
-    duration: '90 min',
-    type: 'live'
-  },
-  {
-    id: '2',
-    title: 'Database Design: Normalization',
-    course: 'Database Systems',
-    courseCode: 'CS202',
-    instructor: 'Prof. John Doe',
-    date: '2023-10-16',
-    time: '10:00-12:00',
-    status: 'upcoming',
-    participants: 28,
-    expectedParticipants: 35,
-    duration: '120 min',
-    type: 'scheduled'
-  },
-  {
-    id: '3',
-    title: 'Advanced Programming: Design Patterns',
-    course: 'Advanced Programming Techniques',
-    courseCode: 'CS304',
-    instructor: 'Dr. Maria Rodriguez',
-    date: '2023-10-12',
-    time: '15:00-16:30',
-    status: 'completed',
-    participants: 25,
-    engagement: 82,
-    duration: '90 min',
-    type: 'recorded',
-    recordingAvailable: true
-  },
-  {
-    id: '4',
-    title: 'Data Structures: Trees and Graphs',
-    course: 'Data Structures and Algorithms',
-    courseCode: 'CS201',
-    instructor: 'Prof. David Chen',
-    date: '2023-10-11',
-    time: '13:00-14:30',
-    status: 'completed',
-    participants: 38,
-    engagement: 75,
-    duration: '90 min',
-    type: 'recorded',
-    recordingAvailable: true
-  },
-  {
-    id: '5',
-    title: 'Web Development: Frontend Frameworks',
-    course: 'Web Development',
-    courseCode: 'CS305',
-    instructor: 'Dr. Alex Johnson',
-    date: '2023-10-18',
-    time: '11:00-12:30',
-    status: 'upcoming',
-    participants: 0,
-    expectedParticipants: 30,
-    duration: '90 min',
-    type: 'scheduled'
-  }
-];
+import { sessionService, Session } from '../../services/sessionService';
 
 export const SessionList = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterActive, setFilterActive] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+
+  const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
+
+  // Load sessions from service
+  useEffect(() => {
+    const loadSessions = () => {
+      const allSessions = sessionService.getAllSessions();
+      setSessions(allSessions);
+    };
+
+    loadSessions();
+    
+    // Reload sessions periodically to catch status updates
+    const interval = setInterval(loadSessions, 30000); // Every 30 seconds
+    
+    // Listen for storage changes (when sessions are created/updated in other tabs)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'learning_platform_sessions') {
+        loadSessions();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   // Filter sessions
   let filteredSessions = sessions.filter(session => {
@@ -149,11 +104,11 @@ export const SessionList = () => {
             View and join upcoming, live, and past sessions
           </p>
         </div>
-        {(user?.role === 'instructor' || user?.role === 'admin') && (
+        {isInstructor && (
           <Button
             variant="primary"
-            leftIcon={<PlayIcon className="h-4 w-4" />}
-            onClick={() => {/* Navigate to create session */}}
+            leftIcon={<PlusIcon className="h-4 w-4" />}
+            onClick={() => navigate('/dashboard/sessions/create')}
           >
             Create Session
           </Button>
@@ -187,7 +142,7 @@ export const SessionList = () => {
             >
               <CalendarIcon className="-ml-1 mr-2 h-5 w-5" />
               Filters
-            </button>
+              </button>
           </div>
 
           {/* Filter Options */}
@@ -269,7 +224,7 @@ export const SessionList = () => {
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-xl font-semibold text-gray-900">
-                            {session.title}
+                          {session.title}
                           </h3>
                           {getStatusBadge(session.status)}
                         </div>
@@ -337,6 +292,17 @@ export const SessionList = () => {
 
                   {/* Right Section - Actions */}
                   <div className="flex flex-col sm:flex-row gap-3 lg:flex-col lg:items-end">
+                    {isInstructor && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        leftIcon={<EditIcon className="h-4 w-4" />}
+                        onClick={() => navigate(`/dashboard/sessions/${session.id}/edit`)}
+                        className="w-full sm:w-auto"
+                      >
+                        Edit
+                      </Button>
+                    )}
                     {session.status === 'live' && (
                       <Link to={`/dashboard/sessions/${session.id}`} className="w-full sm:w-auto">
                         <Button
@@ -380,9 +346,9 @@ export const SessionList = () => {
                         )}
                       </>
                     )}
-                  </div>
-                </div>
-              </div>
+                      </div>
+                      </div>
+          </div>
             </Card>
           ))}
         </div>
@@ -427,6 +393,6 @@ export const SessionList = () => {
           </div>
         </Card>
       ) : null}
-    </div>
+      </div>
   );
 };

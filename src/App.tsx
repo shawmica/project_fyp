@@ -18,6 +18,8 @@ import { CourseList } from './pages/courses/CourseList';
 import { CourseDetail } from './pages/courses/CourseDetail';
 import { SessionList } from './pages/sessions/SessionList';
 import { LiveSession } from './pages/sessions/LiveSession';
+import { SessionCreate } from './pages/sessions/SessionCreate';
+import { SessionEdit } from './pages/sessions/SessionEdit';
 
 export function App() {
   return (
@@ -61,8 +63,10 @@ export function App() {
           {/* Common routes available to all roles */}
           <Route path="courses" element={<CourseList />} />
           <Route path="courses/:courseId" element={<CourseDetail />} />
-          <Route path="sessions" element={<SessionList />} />
+          <Route path="sessions/create" element={<SessionCreate />} />
+          <Route path="sessions/:sessionId/edit" element={<SessionEdit />} />
           <Route path="sessions/:sessionId" element={<LiveSession />} />
+          <Route path="sessions" element={<SessionList />} />
           
           {/* Student-specific routes */}
           <Route path="student/engagement" element={<StudentEngagement />} />
