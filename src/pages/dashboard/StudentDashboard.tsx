@@ -42,17 +42,17 @@ const performanceData = {
 };
 export const StudentDashboard = () => {
   return <div className="py-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold text-gray-900">
             Welcome back,machaan!
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-xs sm:text-sm text-gray-500">
             Here's what's happening with your courses today.
           </p>
         </div>
-        <Link to="/dashboard/student/engagement">
-          <Button variant="primary" leftIcon={<ActivityIcon className="h-4 w-4" />}>
+        <Link to="/dashboard/student/engagement" className="w-full sm:w-auto">
+          <Button variant="primary" leftIcon={<ActivityIcon className="h-4 w-4" />} fullWidth className="sm:w-auto">
             View Engagement
           </Button>
         </Link>

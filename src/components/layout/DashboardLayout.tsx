@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { BookOpenIcon, CalendarIcon, MenuIcon, XIcon, HomeIcon, GraduationCapIcon, BellIcon, LogOutIcon, BarChart3Icon, ActivityIcon } from 'lucide-react';
+import { BookOpenIcon, CalendarIcon, MenuIcon, XIcon, HomeIcon, GraduationCapIcon, BellIcon, LogOutIcon, BarChart3Icon, ActivityIcon, TargetIcon } from 'lucide-react';
 
 export const DashboardLayout = () => {
   const location = useLocation();
@@ -78,6 +78,11 @@ export const DashboardLayout = () => {
         name: 'Analytics',
         href: '/dashboard/instructor/analytics',
         icon: BarChart3Icon
+      });
+      baseItems.push({
+        name: 'Questions',
+        href: '/dashboard/instructor/questions',
+        icon: TargetIcon
       });
     }
 
@@ -257,15 +262,20 @@ export const DashboardLayout = () => {
           <button className="px-4 border-r border-gray-200 text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 md:hidden" onClick={() => setSidebarOpen(true)}>
             <MenuIcon className="h-6 w-6" aria-hidden="true" />
           </button>
-          <div className="flex-1 px-4 flex justify-between items-center">
-            <div className="flex items-center">
-              <span className="text-lg font-semibold text-gray-900 hidden sm:block">
-                {user?.role === 'student' && 'Student Dashboard'}
-                {user?.role === 'instructor' && 'Instructor Dashboard'}
-                {user?.role === 'admin' && 'Admin Dashboard'}
-              </span>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6 space-x-2">
+            <div className="flex-1 px-2 sm:px-4 flex justify-between items-center">
+                <div className="flex items-center">
+                  <span className="text-base sm:text-lg font-semibold text-gray-900 hidden sm:block">
+                    {user?.role === 'student' && 'Student Dashboard'}
+                    {user?.role === 'instructor' && 'Instructor Dashboard'}
+                    {user?.role === 'admin' && 'Admin Dashboard'}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900 sm:hidden">
+                    {user?.role === 'student' && 'Student'}
+                    {user?.role === 'instructor' && 'Instructor'}
+                    {user?.role === 'admin' && 'Admin'}
+                  </span>
+                </div>
+                <div className="ml-2 sm:ml-4 flex items-center md:ml-6 space-x-1 sm:space-x-2">
               {/* Notifications Button */}
               <button 
                 className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" 

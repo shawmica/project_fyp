@@ -13,6 +13,7 @@ import { AdminDashboard } from './pages/dashboard/AdminDashboard';
 import { StudentEngagement } from './pages/dashboard/StudentEngagement';
 import { InstructorAnalytics } from './pages/dashboard/InstructorAnalytics';
 import { UserProfile } from './pages/profile/UserProfile';
+import { QuestionManagement } from './pages/questions/QuestionManagement';
 import { CourseList } from './pages/courses/CourseList';
 import { CourseDetail } from './pages/courses/CourseDetail';
 import { SessionList } from './pages/sessions/SessionList';
@@ -68,6 +69,7 @@ export function App() {
           
           {/* Instructor-specific routes */}
           <Route path="instructor/analytics" element={<InstructorAnalytics />} />
+          <Route path="instructor/questions" element={<QuestionManagement />} />
           
           {/* Common routes */}
           <Route path="profile" element={<UserProfile />} />
